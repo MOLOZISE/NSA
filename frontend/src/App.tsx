@@ -95,9 +95,14 @@ export default function App() {
   const [memos, setMemos] = useState<Memo[]>([]);
   const [sessionTitle, setSessionTitle] = useState('새 투자 세션');
   const [memoContent, setMemoContent] = useState('');
+  const [editingMemoId, setEditingMemoId] = useState<string | null>(null);
+  const [editingMemoContent, setEditingMemoContent] = useState('');
   const [todoTitle, setTodoTitle] = useState('');
+  const [editingTodoId, setEditingTodoId] = useState<string | null>(null);
+  const [editingTodoTitle, setEditingTodoTitle] = useState('');
   const [prompt, setPrompt] = useState('오늘 시장 점검과 주요 할 일을 정리해줘');
   const [chatResponse, setChatResponse] = useState<ChatResponse | null>(null);
+  const [showThinking, setShowThinking] = useState(true);
   const [loading, setLoading] = useState(false);
 
   const watchlist: WatchItem[] = [
@@ -192,6 +197,32 @@ export default function App() {
     setMemoContent('');
   };
 
+  const startEditMemo = (memo: Memo) => {
+    setEditingMemoId(memo.id);
+    setEditingMemoContent(memo.content);
+  };
+
+  const saveMemo = async () => {
+    if (!selectedId || !editingMemoId || !editingMemoContent.trim()) return;
+    const updated = await request<Memo>(`/sessions/${selectedId}/memos/${editingMemoId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ content: editingMemoContent.trim() }),
+    });
+    setMemos((prev) => prev.map((memo) => (memo.id === updated.id ? updated : memo)));
+    setEditingMemoId(null);
+    setEditingMemoContent('');
+  };
+
+  const deleteMemo = async (memoId: string) => {
+    if (!selectedId) return;
+    await request<void>(`/sessions/${selectedId}/memos/${memoId}`, { method: 'DELETE' });
+    setMemos((prev) => prev.filter((memo) => memo.id !== memoId));
+    if (editingMemoId === memoId) {
+      setEditingMemoId(null);
+      setEditingMemoContent('');
+    }
+  };
+
   const addTodo = async () => {
     if (!selectedId || !todoTitle.trim()) return;
     const newTodo = await request<Todo>(`/sessions/${selectedId}/todos`, {
@@ -208,6 +239,32 @@ export default function App() {
       method: 'POST',
     });
     setTodos((prev) => prev.map((todo) => (todo.id === todoId ? updated : todo)));
+  };
+
+  const startEditTodo = (todo: Todo) => {
+    setEditingTodoId(todo.id);
+    setEditingTodoTitle(todo.title);
+  };
+
+  const saveTodo = async () => {
+    if (!selectedId || !editingTodoId || !editingTodoTitle.trim()) return;
+    const updated = await request<Todo>(`/sessions/${selectedId}/todos/${editingTodoId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ title: editingTodoTitle.trim(), done: todos.find((t) => t.id === editingTodoId)?.done }),
+    });
+    setTodos((prev) => prev.map((todo) => (todo.id === updated.id ? updated : todo)));
+    setEditingTodoId(null);
+    setEditingTodoTitle('');
+  };
+
+  const deleteTodo = async (todoId: string) => {
+    if (!selectedId) return;
+    await request<void>(`/sessions/${selectedId}/todos/${todoId}`, { method: 'DELETE' });
+    setTodos((prev) => prev.filter((todo) => todo.id !== todoId));
+    if (editingTodoId === todoId) {
+      setEditingTodoId(null);
+      setEditingTodoTitle('');
+    }
   };
 
   const sendChat = async () => {
@@ -344,7 +401,42 @@ export default function App() {
                 {memos.map((memo) => (
                   <div key={memo.id} className="list-card">
                     <div className="list-label">메모</div>
-                    <div>{memo.content}</div>
+                    {editingMemoId === memo.id ? (
+                      <textarea
+                        className="inline-textarea"
+                        value={editingMemoContent}
+                        onChange={(e) => setEditingMemoContent(e.target.value)}
+                      />
+                    ) : (
+                      <div>{memo.content}</div>
+                    )}
+                    <div className="inline-actions">
+                      {editingMemoId === memo.id ? (
+                        <>
+                          <button className="chip" onClick={saveMemo}>
+                            저장
+                          </button>
+                          <button
+                            className="chip chip-ghost"
+                            onClick={() => {
+                              setEditingMemoId(null);
+                              setEditingMemoContent('');
+                            }}
+                          >
+                            취소
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button className="chip" onClick={() => startEditMemo(memo)}>
+                            수정
+                          </button>
+                          <button className="chip chip-ghost" onClick={() => deleteMemo(memo.id)}>
+                            삭제
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -363,10 +455,45 @@ export default function App() {
                 {todos.map((todo) => (
                   <div key={todo.id} className="list-card todo-card">
                     <div className="list-label">할 일</div>
-                    <div className={todo.done ? 'todo-done' : ''}>{todo.title}</div>
-                    <button className="chip" onClick={() => toggleTodo(todo.id)}>
-                      {todo.done ? '되돌리기' : '완료'}
-                    </button>
+                    {editingTodoId === todo.id ? (
+                      <input
+                        className="inline-input"
+                        value={editingTodoTitle}
+                        onChange={(e) => setEditingTodoTitle(e.target.value)}
+                      />
+                    ) : (
+                      <div className={todo.done ? 'todo-done' : ''}>{todo.title}</div>
+                    )}
+                    <div className="inline-actions">
+                      <button className="chip" onClick={() => toggleTodo(todo.id)}>
+                        {todo.done ? '되돌리기' : '완료'}
+                      </button>
+                      {editingTodoId === todo.id ? (
+                        <>
+                          <button className="chip" onClick={saveTodo}>
+                            저장
+                          </button>
+                          <button
+                            className="chip chip-ghost"
+                            onClick={() => {
+                              setEditingTodoId(null);
+                              setEditingTodoTitle('');
+                            }}
+                          >
+                            취소
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button className="chip" onClick={() => startEditTodo(todo)}>
+                            제목 수정
+                          </button>
+                          <button className="chip chip-ghost" onClick={() => deleteTodo(todo.id)}>
+                            삭제
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -401,10 +528,17 @@ export default function App() {
             </div>
             {chatResponse ? (
               <div className="chat-preview">
-                <div className="subtext">Thinking</div>
-                <div className="code-block" style={{ marginBottom: 12 }}>
-                  {chatResponse.thinking}
+                <div className="subtext with-toggle">
+                  <span>Thinking</span>
+                  <button className="chip chip-ghost" onClick={() => setShowThinking((prev) => !prev)}>
+                    {showThinking ? '숨기기' : '보기'}
+                  </button>
                 </div>
+                {showThinking ? (
+                  <div className="code-block" style={{ marginBottom: 12 }}>
+                    {chatResponse.thinking}
+                  </div>
+                ) : null}
                 <div className="subtext">Reply</div>
                 <div className="reply-block">
                   {chatResponse.reply.split('\n').map((line) => (

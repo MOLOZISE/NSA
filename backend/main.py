@@ -38,8 +38,17 @@ class MemoCreateRequest(BaseModel):
     content: str
 
 
+class MemoUpdateRequest(BaseModel):
+    content: str
+
+
 class TodoCreateRequest(BaseModel):
     title: str
+
+
+class TodoUpdateRequest(BaseModel):
+    title: str
+    done: Optional[bool] = None
 
 
 class ChatRequest(BaseModel):
@@ -128,6 +137,48 @@ def toggle_todo(session_id: str, todo_id: str) -> Todo:
         if todo.id == todo_id:
             todo.done = not todo.done
             return todo
+    raise HTTPException(status_code=404, detail="Todo not found")
+
+
+@app.patch("/sessions/{session_id}/memos/{memo_id}")
+def update_memo(session_id: str, memo_id: str, payload: MemoUpdateRequest) -> Memo:
+    session = _get_session_or_404(session_id)
+    for memo in session.memos:
+        if memo.id == memo_id:
+            memo.content = payload.content
+            return memo
+    raise HTTPException(status_code=404, detail="Memo not found")
+
+
+@app.delete("/sessions/{session_id}/memos/{memo_id}", status_code=204)
+def delete_memo(session_id: str, memo_id: str) -> None:
+    session = _get_session_or_404(session_id)
+    for idx, memo in enumerate(session.memos):
+        if memo.id == memo_id:
+            session.memos.pop(idx)
+            return None
+    raise HTTPException(status_code=404, detail="Memo not found")
+
+
+@app.patch("/sessions/{session_id}/todos/{todo_id}")
+def update_todo(session_id: str, todo_id: str, payload: TodoUpdateRequest) -> Todo:
+    session = _get_session_or_404(session_id)
+    for todo in session.todos:
+        if todo.id == todo_id:
+            todo.title = payload.title
+            if payload.done is not None:
+                todo.done = payload.done
+            return todo
+    raise HTTPException(status_code=404, detail="Todo not found")
+
+
+@app.delete("/sessions/{session_id}/todos/{todo_id}", status_code=204)
+def delete_todo(session_id: str, todo_id: str) -> None:
+    session = _get_session_or_404(session_id)
+    for idx, todo in enumerate(session.todos):
+        if todo.id == todo_id:
+            session.todos.pop(idx)
+            return None
     raise HTTPException(status_code=404, detail="Todo not found")
 
 

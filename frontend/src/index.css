@@ -236,6 +236,25 @@ button {
   padding-bottom: 42px;
 }
 
+.inline-textarea,
+.inline-input {
+  width: 100%;
+  margin: 6px 0 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(15, 23, 42, 0.65);
+  color: #e2e8f0;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+.inline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
 .list-label {
   font-size: 12px;
   color: #94a3b8;
@@ -288,6 +307,13 @@ button {
   padding: 14px 16px;
   border: 1px solid rgba(148, 163, 184, 0.35);
   overflow-x: auto;
+}
+
+.with-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .kicker,
