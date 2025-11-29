@@ -28,6 +28,27 @@ interface ChatResponse {
   thinking: string;
 }
 
+interface WatchItem {
+  symbol: string;
+  price: string;
+  change: string;
+  sentiment: 'bullish' | 'neutral' | 'bearish';
+  note: string;
+}
+
+interface EventItem {
+  title: string;
+  date: string;
+  impact: '높음' | '중간' | '낮음';
+  tag: string;
+}
+
+interface PlaybookItem {
+  title: string;
+  description: string;
+  actions: string[];
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     headers: {
@@ -78,6 +99,62 @@ export default function App() {
   const [prompt, setPrompt] = useState('오늘 시장 점검과 주요 할 일을 정리해줘');
   const [chatResponse, setChatResponse] = useState<ChatResponse | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const watchlist: WatchItem[] = [
+    {
+      symbol: 'NVDA',
+      price: '$945.2',
+      change: '+2.1%',
+      sentiment: 'bullish',
+      note: '데이터센터 수요 견조, AI GPU 출하 추적 필요',
+    },
+    {
+      symbol: 'AAPL',
+      price: '$196.3',
+      change: '-0.4%',
+      sentiment: 'neutral',
+      note: 'Vision Pro 판매 모멘텀 재확인, 서비스 매출 성장',
+    },
+    {
+      symbol: 'TSLA',
+      price: '$185.7',
+      change: '+3.5%',
+      sentiment: 'bullish',
+      note: 'FSD 구독 출시 루머, 마진 반등 여부 체크',
+    },
+    {
+      symbol: 'MSFT',
+      price: '$412.8',
+      change: '+0.6%',
+      sentiment: 'neutral',
+      note: 'Copilot 확산 속도 모니터링, Azure 성장률 가이던스',
+    },
+  ];
+
+  const events: EventItem[] = [
+    { title: '미국 CPI 발표', date: '04.15 (월) 21:30', impact: '높음', tag: '매크로' },
+    { title: 'TSLA 실적 콜', date: '04.18 (목) 06:00', impact: '높음', tag: '실적' },
+    { title: 'NVIDIA GTC 키노트', date: '04.25 (목) 03:00', impact: '중간', tag: '이벤트' },
+    { title: '한국 수출입 통계', date: '04.30 (화) 09:00', impact: '낮음', tag: '매크로' },
+  ];
+
+  const playbooks: PlaybookItem[] = [
+    {
+      title: '🚀 AI 반도체 로드맵',
+      description: 'NVDA/AMD/GG 관련 메모를 읽고 1주일 플랜 제안',
+      actions: ['메모 요약 → 리스크/트리거 도출', '주요 이벤트 캘린더링', '할 일 자동 생성'],
+    },
+    {
+      title: '⚡ 속보 대응 봇',
+      description: '속보 + 트위터 키워드 수집 후 영향도 파악',
+      actions: ['긍/부정 스코어링', '주요 종목 영향도 표', '매수/매도 체크리스트'],
+    },
+    {
+      title: '📈 기술적 분석 프로브',
+      description: '심볼 입력 → RSI/MACD/거래량 돌파 알림 템플릿 생성',
+      actions: ['지표 스냅샷', '조건 충족 시 할 일 생성', '백테스트 TODO 목록'],
+    },
+  ];
 
   useEffect(() => {
     reload();
@@ -149,166 +226,272 @@ export default function App() {
   };
 
   return (
-    <div className="container">
-      <header style={{ marginBottom: 28 }}>
-        <p className="kicker">NotionLike Stock Trading AI</p>
-        <h1 className="hero-title">NSTA 시작하기: 메모 · 할 일 · 대화를 한 곳에서</h1>
-        <p className="hero-lead">
-          메모/할 일/세션을 묶고, AI와 대화하며 투자 인사이트를 쌓아가는 초기 버전입니다. 주식 가격, 뉴스,
-          에이전트 자동화는 이후 단계에서 확장하세요.
-        </p>
-        <div className="badge">🚀 Day 1 scaffolding: FastAPI + Vite + in-memory store</div>
-      </header>
-
-      <section className="grid grid-2" style={{ marginBottom: 24 }}>
-        <div className="card">
-          <h2 className="section-title">1) 세션 만들기</h2>
-          <p className="subtext">포트폴리오/전략별로 세션을 나누고 메모·할 일을 연결합니다.</p>
-          <div className="input-row">
-            <input
-              value={sessionTitle}
-              onChange={(e) => setSessionTitle(e.target.value)}
-              placeholder="예: 2025 1Q AI 반도체 전략"
-            />
-            <button className="primary-button" onClick={addSession}>
-              세션 추가
-            </button>
+    <div className="page">
+      <div className="container">
+        <header className="hero">
+          <div>
+            <p className="kicker">NSTA · NotionLike Stock Trading AI</p>
+            <h1 className="hero-title">내 투자 공간을 한눈에: 세션·메모·할 일·AI</h1>
+            <p className="hero-lead">
+              생성형 AI와 메모/할 일을 엮어, 주식 인사이트를 쌓는 개인 대시보드입니다. 내가 보는 종목, 이벤트,
+              에이전트 플레이북을 한 화면에서 관리하세요.
+            </p>
+            <div className="hero-actions">
+              <div className="badge">🚀 FastAPI + Vite 인메모리 프로토타입</div>
+              <div className="badge badge-ghost">🧠 GPT 연동/Agent는 다음 스텝</div>
+            </div>
           </div>
-          <div className="input-row">
-            <select value={selectedId ?? ''} onChange={(e) => setSelectedId(e.target.value)}>
-              <option value="">세션을 선택하세요</option>
-              {sessions.map((session) => (
-                <option key={session.id} value={session.id}>
-                  {session.title}
-                </option>
-              ))}
-            </select>
-            <button className="secondary-button" onClick={reload}>
-              새로고침
-            </button>
-          </div>
-          {selectedSession ? <p className="subtext">선택된 세션: {selectedSession.title}</p> : null}
-        </div>
-
-        <div className="card">
-          <h2 className="section-title">2) 메모 / 할 일</h2>
-          <p className="subtext">아이디어는 메모에, 실행은 할 일로. 추후 RAG/Agent 입력으로 활용됩니다.</p>
-
-          <div className="input-row">
-            <textarea
-              value={memoContent}
-              onChange={(e) => setMemoContent(e.target.value)}
-              placeholder="메모 작성 (뉴스 요약, 논리, 리스크 등)"
-            />
-            <button className="primary-button" onClick={addMemo} disabled={!selectedId}>
-              메모 추가
-            </button>
-          </div>
-
-          <div className="input-row">
-            <input
-              value={todoTitle}
-              onChange={(e) => setTodoTitle(e.target.value)}
-              placeholder="할 일 작성 (예: AAPL 실적 체크)"
-            />
-            <button className="secondary-button" onClick={addTodo} disabled={!selectedId}>
-              할 일 추가
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <section className="grid grid-2" style={{ marginBottom: 24 }}>
-        <div className="card">
-          <h2 className="section-title">메모 목록</h2>
-          {memos.length === 0 ? (
-            <p className="subtext">세션을 선택하고 메모를 추가해보세요.</p>
-          ) : (
-            memos.map((memo) => (
-              <div key={memo.id} className="list-item">
-                <div style={{ fontWeight: 700, marginBottom: 4 }}>메모</div>
-                <div>{memo.content}</div>
+          <div className="hero-panel">
+            <div className="hero-panel-title">오늘의 빠른 체크</div>
+            <div className="panel-row">
+              <div>
+                <div className="panel-label">세션</div>
+                <div className="panel-value">{sessions.length}</div>
               </div>
-            ))
-          )}
-        </div>
-
-        <div className="card">
-          <h2 className="section-title">할 일 목록</h2>
-          {todos.length === 0 ? (
-            <p className="subtext">진행 중인 할 일이 없습니다.</p>
-          ) : (
-            todos.map((todo) => (
-              <div key={todo.id} className="list-item" style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span className={todo.done ? 'todo-done' : ''}>{todo.title}</span>
-                <button className="secondary-button" onClick={() => toggleTodo(todo.id)}>
-                  {todo.done ? '되돌리기' : '완료'}
-                </button>
+              <div>
+                <div className="panel-label">메모</div>
+                <div className="panel-value">{memos.length}</div>
               </div>
-            ))
-          )}
-        </div>
-      </section>
-
-      <section className="grid grid-2" style={{ marginBottom: 24 }}>
-        <div className="card">
-          <h2 className="section-title">3) Assistant 대화</h2>
-          <p className="subtext">현재는 목업 응답입니다. OpenAI/Anthropic 등을 연결해 생각(&lt;think&gt;)과 응답을 분리해보세요.</p>
-          <div className="input-row">
-            <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} />
+              <div>
+                <div className="panel-label">할 일</div>
+                <div className="panel-value">{todos.length}</div>
+              </div>
+            </div>
+            <div className="panel-footer">세션을 선택하면 연결된 메모와 할 일을 불러옵니다.</div>
           </div>
-          <button className="primary-button" onClick={sendChat} disabled={loading}>
-            {loading ? '생각 중...' : '대화 보내기'}
-          </button>
-        </div>
+        </header>
 
-        <div className="card">
-          <h2 className="section-title">응답 미리보기</h2>
-          {chatResponse ? (
-            <div>
-              <p className="subtext">Thinking</p>
-              <div className="code-block" style={{ marginBottom: 12 }}>
-                {chatResponse.thinking}
-              </div>
-              <p className="subtext">Reply</p>
-              <div className="list-item" style={{ background: '#fff' }}>
-                {chatResponse.reply.split('\n').map((line) => (
-                  <div key={line}>{line}</div>
+        <section className="grid grid-3" style={{ marginBottom: 18 }}>
+          <div className="card fill">
+            <div className="card-title-row">
+              <h2 className="section-title">세션 관리</h2>
+              <span className="pill">포트폴리오 단위로 관리</span>
+            </div>
+            <p className="subtext">전략별 세션을 만들고 선택하세요. 각 세션에 메모·할 일이 연결됩니다.</p>
+            <div className="input-row column">
+              <input
+                value={sessionTitle}
+                onChange={(e) => setSessionTitle(e.target.value)}
+                placeholder="예: 2025 1Q AI 반도체 전략"
+              />
+              <button className="primary-button" onClick={addSession}>
+                세션 추가
+              </button>
+            </div>
+            <div className="input-row column">
+              <select value={selectedId ?? ''} onChange={(e) => setSelectedId(e.target.value)}>
+                <option value="">세션을 선택하세요</option>
+                {sessions.map((session) => (
+                  <option key={session.id} value={session.id}>
+                    {session.title}
+                  </option>
+                ))}
+              </select>
+              <button className="secondary-button" onClick={reload}>
+                새로고침
+              </button>
+            </div>
+            {selectedSession ? <div className="info-line">선택된 세션: {selectedSession.title}</div> : null}
+          </div>
+
+          <div className="card fill">
+            <div className="card-title-row">
+              <h2 className="section-title">메모 작성</h2>
+              <span className="pill pill-blue">정보 축적</span>
+            </div>
+            <p className="subtext">뉴스 요약, 논리, 리스크, 트리거 등을 자유롭게 적어두세요.</p>
+            <div className="stack">
+              <textarea
+                value={memoContent}
+                onChange={(e) => setMemoContent(e.target.value)}
+                placeholder="예: NVDA GTC 신제품 발표 기대. 수요/CapEx 가이던스 확인 필요"
+              />
+              <button className="primary-button" onClick={addMemo} disabled={!selectedId}>
+                메모 추가
+              </button>
+            </div>
+          </div>
+
+          <div className="card fill">
+            <div className="card-title-row">
+              <h2 className="section-title">할 일 만들기</h2>
+              <span className="pill pill-green">실행</span>
+            </div>
+            <p className="subtext">실적 콜 리마인더, 체크리스트, 리뷰 등 실행 항목을 적습니다.</p>
+            <div className="stack">
+              <input
+                value={todoTitle}
+                onChange={(e) => setTodoTitle(e.target.value)}
+                placeholder="예: TSLA 실적 콜 요약 후 메모에 반영"
+              />
+              <button className="secondary-button" onClick={addTodo} disabled={!selectedId}>
+                할 일 추가
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section className="grid grid-2" style={{ marginBottom: 18 }}>
+          <div className="card fill">
+            <div className="card-title-row">
+              <h2 className="section-title">메모 보드</h2>
+              <span className="pill">세션 연동</span>
+            </div>
+            {memos.length === 0 ? (
+              <p className="subtext">세션을 선택하고 메모를 추가하면 여기에 쌓입니다.</p>
+            ) : (
+              <div className="list-grid">
+                {memos.map((memo) => (
+                  <div key={memo.id} className="list-card">
+                    <div className="list-label">메모</div>
+                    <div>{memo.content}</div>
+                  </div>
                 ))}
               </div>
-            </div>
-          ) : (
-            <p className="subtext">프롬프트를 입력하고 AI 대화를 시작하세요.</p>
-          )}
-        </div>
-      </section>
+            )}
+          </div>
 
-      <section className="card" style={{ marginBottom: 24 }}>
-        <h2 className="section-title">빠른 확장 체크리스트</h2>
-        <div className="quick-grid">
-          {[
-            '메모/할 일 SQLite 영속화 + Prisma/SQLModel',
-            '주식 시세/뉴스 API 스켈레톤 추가 (Mock → 실제 연동)',
-            'GPT 응답에서 <think> 블록 파싱 UI',
-            'Agent: 종목 요약, 속보 영향도 평가',
-            '기술적 지표 시각화 (RSI, MACD)',
-            '자동화 시나리오: 뉴스→요약→할 일 생성',
-          ].map((item) => (
-            <div key={item} className="quick-card">
-              {item}
+          <div className="card fill">
+            <div className="card-title-row">
+              <h2 className="section-title">할 일 진행 상황</h2>
+              <span className="pill pill-green">진행중</span>
             </div>
-          ))}
-        </div>
-      </section>
+            {todos.length === 0 ? (
+              <p className="subtext">진행 중인 할 일이 없습니다.</p>
+            ) : (
+              <div className="list-grid">
+                {todos.map((todo) => (
+                  <div key={todo.id} className="list-card todo-card">
+                    <div className="list-label">할 일</div>
+                    <div className={todo.done ? 'todo-done' : ''}>{todo.title}</div>
+                    <button className="chip" onClick={() => toggleTodo(todo.id)}>
+                      {todo.done ? '되돌리기' : '완료'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
 
-      <section className="card">
-        <h2 className="section-title">로컬 실행 가이드</h2>
-        <p className="subtext">백엔드/프론트엔드를 각각 띄워 빠르게 검증하세요.</p>
-        <div className="code-block">
-          <div>cd backend && uvicorn main:app --reload --host 0.0.0.0 --port 8000</div>
-          <div style={{ marginTop: 6 }}>cd frontend && npm install && npm run dev -- --host</div>
-        </div>
-      </section>
+        <section className="grid chat-layout" style={{ marginBottom: 18 }}>
+          <div className="card">
+            <div className="card-title-row">
+              <h2 className="section-title">Assistant 대화</h2>
+              <span className="pill pill-blue">목업</span>
+            </div>
+            <p className="subtext">
+              프롬프트를 보내면 &lt;think&gt;와 실제 답변을 분리해 보여줍니다. 추후 GPT/Agent로 교체하세요.
+            </p>
+            <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} className="chat-textarea" />
+            <div className="input-row">
+              <button className="primary-button" onClick={sendChat} disabled={loading}>
+                {loading ? '생각 중...' : '대화 보내기'}
+              </button>
+              <span className="subtext" style={{ margin: 0 }}>
+                세션 연결: {selectedSession ? selectedSession.title : '없음'}
+              </span>
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="card-title-row">
+              <h2 className="section-title">응답 미리보기</h2>
+              <span className="pill">UI 미리보기</span>
+            </div>
+            {chatResponse ? (
+              <div className="chat-preview">
+                <div className="subtext">Thinking</div>
+                <div className="code-block" style={{ marginBottom: 12 }}>
+                  {chatResponse.thinking}
+                </div>
+                <div className="subtext">Reply</div>
+                <div className="reply-block">
+                  {chatResponse.reply.split('\n').map((line) => (
+                    <div key={line}>{line}</div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="subtext">프롬프트를 입력하고 AI 대화를 시작하세요.</p>
+            )}
+          </div>
+        </section>
+
+        <section className="grid grid-3" style={{ marginBottom: 18 }}>
+          <div className="card fill">
+            <div className="card-title-row">
+              <h2 className="section-title">주요 관찰 종목</h2>
+              <span className="pill pill-blue">Watch</span>
+            </div>
+            <div className="watch-grid">
+              {watchlist.map((item) => (
+                <div key={item.symbol} className="watch-card">
+                  <div className="watch-header">
+                    <div className="watch-symbol">{item.symbol}</div>
+                    <div className={`badge chip-${item.sentiment}`}>{item.change}</div>
+                  </div>
+                  <div className="watch-price">{item.price}</div>
+                  <div className="watch-note">{item.note}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="card fill">
+            <div className="card-title-row">
+              <h2 className="section-title">캘린더 & 이벤트</h2>
+              <span className="pill">중요도</span>
+            </div>
+            <div className="timeline">
+              {events.map((event) => (
+                <div key={event.title} className="timeline-row">
+                  <div className="timeline-date">{event.date}</div>
+                  <div className="timeline-body">
+                    <div className="timeline-title">{event.title}</div>
+                    <div className="timeline-meta">
+                      <span className={`impact impact-${event.impact}`}>{event.impact}</span>
+                      <span className="timeline-tag">{event.tag}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="card fill">
+            <div className="card-title-row">
+              <h2 className="section-title">Agent 플레이북</h2>
+              <span className="pill pill-green">다음 단계</span>
+            </div>
+            <div className="playbook-list">
+              {playbooks.map((play) => (
+                <div key={play.title} className="play-card">
+                  <div className="play-title">{play.title}</div>
+                  <div className="play-desc">{play.description}</div>
+                  <ul>
+                    {play.actions.map((action) => (
+                      <li key={action}>{action}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="card" style={{ marginBottom: 36 }}>
+          <div className="card-title-row">
+            <h2 className="section-title">로컬 실행 가이드</h2>
+            <span className="pill">Backend / Frontend</span>
+          </div>
+          <p className="subtext">두 터미널에서 각각 실행하면 됩니다.</p>
+          <div className="code-block">
+            <div>cd backend && uvicorn main:app --reload --host 0.0.0.0 --port 8000</div>
+            <div style={{ marginTop: 6 }}>cd frontend && npm install && npm run dev -- --host</div>
+          </div>
+        </section>
+      </div>
     </div>
   );
 }
